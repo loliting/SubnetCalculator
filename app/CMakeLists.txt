@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOUIC_SEARCH_PATHS ui)
 
 set(SOURCES
+# C++ source files:
     src/main.cpp
     src/Application.cpp
     src/Application.hpp
@@ -20,12 +21,30 @@ set(SOURCES
     src/Ipv6Widget.hpp
     src/Ipv6Widget.cpp
 
+# Qt UI files:
     ui/MainWindow.ui
     ui/Ipv4Widget.ui
     ui/Ipv6Widget.ui
+
+# Qt QRC files:
+    resources/res.qrc
 )
 
-qt_add_executable(SubnetCalculatorApp MACOSX_BUNDLE ${SOURCES})
+if(APPLE)
+    set(MACOS_APP_ICON ${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.icns)
+    set_source_files_properties(${MACOS_APP_ICON} PROPERTIES
+        MACOSX_PACKAGE_LOCATION "Resources"
+    )
+elseif(WIN32)
+    enable_language("RC")
+    set(WIN32_RESOURCES ${CMAKE_SOURCE_DIR}/app/resources/res.rc)
+endif()
+
+qt_add_executable(SubnetCalculatorApp
+    ${SOURCES}
+    ${MACOS_APP_ICON}
+    ${WIN32_RESOURCES}
+)
 
 set_target_properties(SubnetCalculatorApp PROPERTIES
     OUTPUT_NAME "SubnetCalculator"
