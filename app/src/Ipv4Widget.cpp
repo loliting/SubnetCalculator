@@ -18,7 +18,6 @@
 #include "Ipv4Widget.hpp"
 #include "ui_Ipv4Widget.h"
 
-#include <QtCore/QtMinMax>
 #include <QtGui/QKeyEvent>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QHeaderView>
