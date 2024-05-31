@@ -1,0 +1,9 @@
+/build
+
+.vscode
+
+# Qt Creator
+*.autosave
+CMakeLists.txt.user
+
+.DS_Store
