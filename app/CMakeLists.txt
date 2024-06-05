@@ -9,6 +9,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_AUTOUIC_SEARCH_PATHS ui)
 
+qt_standard_project_setup()
+
 set(SOURCES
 # C++ source files:
     src/main.cpp
@@ -55,11 +57,19 @@ set_target_properties(SubnetCalculatorApp PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE src)
-target_include_directories(${PROJECT_NAME} PRIVATE ../lib/include)
+target_include_directories(SubnetCalculatorApp PRIVATE src)
+target_include_directories(SubnetCalculatorApp PRIVATE ../lib/include)
 target_link_libraries(SubnetCalculatorApp PRIVATE
     Qt::Core
     Qt::Gui
     Qt::Widgets
     libSubnetCalculator
 )
+
+qt_generate_deploy_app_script(
+    TARGET SubnetCalculatorApp
+    OUTPUT_SCRIPT deploy_script
+    NO_UNSUPPORTED_PLATFORM_ERROR
+)
+
+install(SCRIPT ${deploy_script})
