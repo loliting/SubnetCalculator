@@ -47,8 +47,12 @@ class Ipv4Widget : public QWidget
 public:
     explicit Ipv4Widget(QWidget *parent = nullptr);
     ~Ipv4Widget();
+signals:
+    void saveTableAvaliable(bool);
 public slots:
     void update();
+    bool canSaveTable();
+    void saveTable();
 private slots:
     void updateSubnetCountRange();
     void updateIpv4AddressClassTooltip();
@@ -66,6 +70,8 @@ private:
     libSubnetCalculator::IPv4Address::Class lastIpv4Class;
     libSubnetCalculator::IPv4Network net;
     std::vector<libSubnetCalculator::IPv4Network> subnets;
+
+    bool isSaveTableAvaliable = false;
 };
 
 #endif // IPV4WIDGET_HPP

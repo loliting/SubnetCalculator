@@ -10,12 +10,19 @@ class SaveAsDialog;
 }
 
 enum CsvEncoding {
-    UTF8_BOM,
-    UTF8 ,
-    UTF_16BE_BOM,
-    UTF_16BE,
-    UTF_16LE_BOM,
-    UTF_16LE,
+    /* BOM encodings should have uneven indices */
+    BOM_FLAG = 1,
+
+    UTF8 = 0,
+    UTF8_BOM = UTF8 | BOM_FLAG,
+    UTF16BE = 2,
+    UTF16BE_BOM = UTF16BE | BOM_FLAG,
+    UTF16LE = 4,
+    UTF16LE_BOM = UTF16LE | BOM_FLAG,
+    UTF32BE = 6,
+    UTF32BE_BOM = UTF32BE | BOM_FLAG,
+    UTF32LE = 8,
+    UTF32LE_BOM = UTF32LE | BOM_FLAG,
 
 
     ENCODING_MAX
@@ -38,7 +45,7 @@ class SaveAsDialog : public QDialog
     Q_OBJECT
 public:
 
-    explicit SaveAsDialog(QWidget *parent = nullptr);
+    explicit SaveAsDialog(bool hasSubnets, QWidget *parent = nullptr);
     ~SaveAsDialog();
 
     int exec();
