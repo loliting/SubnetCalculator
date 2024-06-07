@@ -47,8 +47,12 @@ class Ipv6Widget : public QWidget
 public:
     explicit Ipv6Widget(QWidget *parent = nullptr);
     ~Ipv6Widget();
+signals:
+    void saveTableAvaliable(bool);
 public slots:
     void update();
+    bool canSaveTable();
+    void saveTable();
 private slots:
     void updateSubnetCountRange();
     void updateTableContent();
@@ -63,6 +67,8 @@ private:
 
     libSubnetCalculator::IPv6Network net;
     std::vector<libSubnetCalculator::IPv6Network> subnets;
+    
+    bool isSaveTableAvaliable;
 };
 
 #endif // IPV6WIDGET_HPP

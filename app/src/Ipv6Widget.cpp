@@ -18,8 +18,14 @@
 #include "Ipv6Widget.hpp"
 #include "ui_Ipv6Widget.h"
 
+#include <QtCore/QFile>
 #include <QtGui/QKeyEvent>
 #include <QtWidgets/QMessageBox>
+#include <QtWidgets/QHeaderView>
+#include <QtWidgets/QFileDialog>
+
+#include "SaveAsDialog.hpp"
+
 
 #define IPV6_REGEX                                                             \
   "^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:)"             \
@@ -35,6 +41,7 @@
   "{3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$"
 
 using namespace libSubnetCalculator;
+
 
 Ipv6InputEventFilter::Ipv6InputEventFilter(
         QSpinBox* cidrInput,
@@ -131,12 +138,14 @@ void Ipv6Widget::on_cidr_valueChanged(int) {
 
 void Ipv6Widget::on_calculate_clicked() {
     updateTableContent();
+    emit saveTableAvaliable(isSaveTableAvaliable);
 }
 
 
 void Ipv6Widget::update() {
     updateSubnetCountRange();
 
+    isSaveTableAvaliable = false;
     ui->subnetsTable->setColumnWidth(0, 0);
     ui->subnetsTable->clear();
     if(ui->subnetCount->currentIndex() > 8)
@@ -145,6 +154,8 @@ void Ipv6Widget::update() {
         ui->calculate->hide();
         updateTableContent();
     }
+
+    emit saveTableAvaliable(isSaveTableAvaliable);
 }
 
 void Ipv6Widget::updateSubnetCountRange() {
@@ -189,6 +200,7 @@ void Ipv6Widget::updateTableContent() {
     };
 
 
+    isSaveTableAvaliable = false;
     ui->subnetsTable->clear();
 
     uint64_t subnetCount = 1;
@@ -217,6 +229,8 @@ void Ipv6Widget::updateTableContent() {
         return;
     }
 
+
+    isSaveTableAvaliable = true;
 
     QTreeWidgetItem *rootItem = new QTreeWidgetItem(ui->subnetsTable);
     rootItem->setText(1, getIpv6RoutingPrefix(net));
@@ -252,4 +266,98 @@ void Ipv6Widget::updateTableContent() {
                 item->setTextAlignment(j, Qt::AlignCenter);
         }
     }
+}
+
+bool Ipv6Widget::canSaveTable() {
+    return isSaveTableAvaliable;
+}
+
+void Ipv6Widget::saveTable() {
+    SaveAsDialog dialog(subnets.size() > 1, this);
+    dialog.exec();
+    if(!dialog.result().has_value())
+        return;
+        
+    auto opt = dialog.result().value();
+
+    QStringConverter::Encoding encoding;
+
+    switch (opt.encoding & ~CsvEncoding::BOM_FLAG) {
+    case CsvEncoding::UTF8:
+        encoding = QStringConverter::Encoding::Utf8;
+        break;
+    case CsvEncoding::UTF16BE:
+        encoding = QStringConverter::Encoding::Utf16BE;
+        break;
+    case CsvEncoding::UTF16LE:
+        encoding = QStringConverter::Encoding::Utf16LE;
+    case CsvEncoding::UTF32BE:
+        encoding = QStringConverter::Encoding::Utf32BE;
+        break;
+    case CsvEncoding::UTF32LE:
+        encoding = QStringConverter::Encoding::Utf32LE;
+        break;
+    default:
+        assert(0); // Unreachable
+        break;
+    }
+
+    QFileDialog fileDialog(this, tr("Save table"), QString(), tr("(*.csv)"));
+    fileDialog.setFileMode(QFileDialog::FileMode::AnyFile);
+    fileDialog.setAcceptMode(QFileDialog::AcceptMode::AcceptSave);
+    if(fileDialog.exec() == QDialog::Rejected)
+        return;
+
+    QString savePath = fileDialog.selectedFiles()[0];
+    QFile f(savePath);
+    f.open(QIODevice::WriteOnly);
+    
+    QTextStream stream(&f);
+    stream.setEncoding(encoding);
+    stream.setGenerateByteOrderMark(opt.encoding & CsvEncoding::BOM_FLAG);
+
+    int columnCount = ui->subnetsTable->columnCount();
+    for(int i = 1; opt.saveHeaderNames && i < columnCount; ++i)
+        stream << opt.delimiter 
+               << ui->subnetsTable->headerItem()->text(i)
+               << opt.delimiter
+               << ((i == columnCount - 1) ? "\r\n" : opt.separator);
+    
+    for(int i = 1; opt.saveRootNet && i < columnCount; ++i)
+        stream << opt.delimiter
+               << ui->subnetsTable->itemAt(0, 0)->text(i)
+               << opt.delimiter
+               << ((i == columnCount - 1) ? "\r\n" : opt.separator);
+    
+    if(opt.saveSubnetsSeparator) {
+        stream << opt.delimiter
+               << tr("Subnets:")
+               << opt.delimiter
+               << opt.separator;
+
+        for(int i = 2; i < columnCount; ++i)
+            stream << opt.delimiter
+                   << opt.delimiter 
+                   << ((i == columnCount - 1) ? "\r\n" : opt.separator);
+    }
+
+    auto items = ui->subnetsTable->itemAt(0, 0);
+    for(unsigned i = 0; i < items->childCount(); ++i) {
+        auto item = items->child(i);
+        for(int i = 1; i < columnCount; ++i)
+            stream << opt.delimiter
+                   << item->text(i)
+                   << opt.delimiter
+                   << ((i == columnCount - 1) ? "\r\n" : opt.separator);
+    }
+    
+
+    stream.flush();
+    f.close();
+
+    if(f.error() != QFileDevice::NoError)
+        QMessageBox(QMessageBox::Critical,
+                    tr("IO error"),
+                    tr("Failed to save table. ") + f.errorString()
+        ).exec();
 }
