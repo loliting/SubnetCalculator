@@ -32,6 +32,12 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+private slots:
+    void updateActionSaveTableState();
+
+    void on_tabWidget_currentChanged(int index);
+    void on_actionSave_Table_As_triggered();
+
 private:
     Ui::MainWindow *ui;
 };

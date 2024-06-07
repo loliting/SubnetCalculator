@@ -18,15 +18,44 @@
 #include "MainWindow.hpp"
 #include "ui_MainWindow.h"
 
+#include "Ipv4Widget.hpp"
+#include "Ipv6Widget.hpp"
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
     setWindowIcon(QIcon(":/icon.png"));
+
+    ui->actionSave_Table_As->setDisabled(true);
+    connect(ui->ipv4, &Ipv4Widget::saveTableAvaliable,
+        this, &MainWindow::updateActionSaveTableState
+    );
+    connect(ui->ipv6, &Ipv6Widget::saveTableAvaliable,
+        this, &MainWindow::updateActionSaveTableState
+    );
+
 }
 
-MainWindow::~MainWindow()
-{
+MainWindow::~MainWindow() {
     delete ui;
+}
+
+void MainWindow::updateActionSaveTableState() {
+    if(ui->ipv4->isVisible())
+        ui->actionSave_Table_As->setEnabled(ui->ipv4->canSaveTable());
+    else
+        ui->actionSave_Table_As->setEnabled(ui->ipv6->canSaveTable());
+}
+
+void MainWindow::on_tabWidget_currentChanged(int index) {
+    updateActionSaveTableState();
+}
+
+void MainWindow::on_actionSave_Table_As_triggered() {
+    if(ui->ipv4->isVisible())
+        ui->ipv4->saveTable();
+    else
+        ui->ipv6->saveTable();
 }
