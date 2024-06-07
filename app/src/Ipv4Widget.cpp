@@ -117,6 +117,7 @@ void Ipv4Widget::on_subnetCount_currentIndexChanged(int index) {
 
 void Ipv4Widget::on_calculate_clicked() {
     updateTableContent();
+    emit saveTableAvaliable(isSaveTableAvaliable);
 }
 
 
