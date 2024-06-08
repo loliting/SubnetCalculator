@@ -58,8 +58,8 @@ int SaveAsDialog::exec() {
 
     SaveAsOptions options {
         .encoding = CsvEncoding(ui->encoding->currentIndex()),
-        .delimiter = delimiter,
         .separator = separator,
+        .delimiter = delimiter,
 
         .saveHeaderNames = ui->saveHeaderNames->isChecked(),
         .saveRootNet = ui->saveRootNet->isChecked(),
