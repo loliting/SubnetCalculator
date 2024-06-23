@@ -26,6 +26,8 @@ class Application : public QApplication
     Q_OBJECT
 public:
     explicit Application(int &argc, char *argv[]);
+private:
+    QTranslator translator;
 };
 
 #endif // APPLICATION_HPP

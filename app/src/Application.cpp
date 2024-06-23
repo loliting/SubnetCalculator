@@ -21,5 +21,6 @@
 Application::Application(int &argc, char* argv[]) :
     QApplication(argc, argv)
 {
-    
+    if(translator.load(":/translations/" + QLocale::languageToCode(QLocale().language())))
+        installTranslator(&translator);
 }
