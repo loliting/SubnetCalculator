@@ -45,4 +45,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: SubnetCalculator-${{env.VERSION}}-macOS
-          path: ${{ env.FINAL_APP_BUNDLE_PATH}}
+          path: ${{ env.FINAL_APP_BUNDLE_PATH}}/..
