@@ -15,7 +15,7 @@ jobs:
                    mkdir ${GITHUB_WORKSPACE}/build
                    cd ${GITHUB_WORKSPACE}/build
                    mkdir out
-                   cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=./out -G ninja ..
+                   cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=./out -G Ninja ..
             - name: Compile
               run: |
                    cd ${GITHUB_WORKSPACE}/build
