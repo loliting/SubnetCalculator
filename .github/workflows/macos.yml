@@ -1,35 +1,37 @@
 name: MacOS Build
 on: push
 env:
-    VERSION: ${{ github.sha }}
+  VERSION: ${{ github.sha }}
 jobs:
-    build:
-        runs-on: macos-latest
-        steps:
-            - name: Install Qt
-              uses: jurplel/install-qt-action@v4
-              with:
-                version: 6.10.*
-            - name: Configure
-              run: |
-                   mkdir ${GITHUB_WORKSPACE}/build
-                   cd ${GITHUB_WORKSPACE}/build
-                   mkdir out
-                   cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=./out -G Ninja ..
-            - name: Compile
-              run: |
-                   cd ${GITHUB_WORKSPACE}/build
-                   ninja
-            - name: Deploy
-              run: |
-                   cd ${GITHUB_WORKSPACE}/build
-                   ninja install
-            - name: Create archive 
-              run: |
-                   cd ${GITHUB_WORKSPACE}/build/out
-                   ditto -c -k --sequesterRsrc --keepParent "SubnetCalculator.app" SubnetCalculator-${{env.VERSION}}-macOS.zip
-            - name: Upload artefact
-              uses: actions/upload-artifact@v4
-              with:
-                name: SubnetCalculator-${{env.VERSION}}-macOS.zip
-                path: ${GITHUB_WORKSPACE}/build/out/SubnetCalculator-${{env.VERSION}}-macOS.zip
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.10.*
+      - name: Configure
+        run: |
+             mkdir ${GITHUB_WORKSPACE}/build
+             cd ${GITHUB_WORKSPACE}/build
+             mkdir out
+             cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=./out -G Ninja ..
+      - name: Compile
+        run: |
+             cd ${GITHUB_WORKSPACE}/build
+             ninja
+      - name: Deploy
+        run: |
+              cd ${GITHUB_WORKSPACE}/build
+              ninja install
+      - name: Create archive 
+        run: |
+              cd ${GITHUB_WORKSPACE}/build/out
+              ditto -c -k --sequesterRsrc --keepParent "SubnetCalculator.app" SubnetCalculator-${{env.VERSION}}-macOS.zip
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SubnetCalculator-${{env.VERSION}}-macOS.zip
+          path: ${GITHUB_WORKSPACE}/build/out/SubnetCalculator-${{env.VERSION}}-macOS.zip
