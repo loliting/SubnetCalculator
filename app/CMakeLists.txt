@@ -81,6 +81,11 @@ target_link_libraries(SubnetCalculatorApp PRIVATE
     libSubnetCalculator
 )
 
+install(TARGETS SubnetCalculatorApp
+    BUNDLE  DESTINATION .
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
 qt_generate_deploy_app_script(
     TARGET SubnetCalculatorApp
     OUTPUT_SCRIPT deploy_script
