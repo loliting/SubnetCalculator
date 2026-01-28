@@ -3,10 +3,16 @@ on: push
 env:
   VERSION: ${{ github.sha }}
   ARTEFACT_PATH: ${{ github.workspace}}/build/out/SubnetCalculator-${{ github.sha }}-macOS.zip
+  CODE_SIGN_CERTIFICATE_NAME: "Karol Maksymowicz Signing"
 jobs:
   build:
     runs-on: macos-latest
     steps:
+      - name: Import Codesign Cert
+        uses: apple-actions/import-codesign-certs@v3
+        with: 
+          p12-file-base64: ${{ secrets.CODE_SIGN_CERTIFICATE_FILE_BASE64 }}
+          p12-password: ${{ secrets.CODE_SIGN_CERTIFICATE_PASSWORD }}
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -21,7 +27,7 @@ jobs:
              mkdir ${{ github.workspace}}/build
              cd ${{ github.workspace}}/build
              mkdir out
-             cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=./out -G Ninja ..
+             cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=./out -DCODE_SIGN_CERT_NAME=${{ env.CODE_SIGN_CERTIFICATE_NAME }} -G Ninja ..
       - name: Compile
         run: |
              cd ${{ github.workspace}}/build
