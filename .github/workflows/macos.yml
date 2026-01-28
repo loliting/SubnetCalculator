@@ -2,7 +2,7 @@ name: MacOS Build
 on: push
 env:
   VERSION: ${{ github.sha }}
-  ARTEFACT_PATH: ${{ github.workspace}}/build/out/SubnetCalculator-${{ github.sha }}-macOS.zip
+  FINAL_APP_BUNDLE_PATH: ${{ github.workspace}}/build/out/SubnetCalculator.app
   CODE_SIGN_CERTIFICATE_NAME: "Karol Maksymowicz Signing"
 jobs:
   build:
@@ -36,13 +36,13 @@ jobs:
         run: |
               cd ${{ github.workspace}}/build
               ninja install
-      - name: Create archive 
+      - name: Code sign
         run: |
-              cd ${{ github.workspace}}/build/out
-              ditto -c -k --sequesterRsrc --keepParent "SubnetCalculator.app" ${{env.ARTEFACT_PATH}}
-              ls
+             xattr -cr ${{ env.FINAL_APP_BUNDLE_PATH }}
+             codesign --force --deep --options runtime --sign "${{ env.CODE_SIGN_CERTIFICATE_NAME }}" ${{ env.FINAL_APP_BUNDLE_PATH }}
+             codesign --verify --deep --verbose=4 ${{ env.FINAL_APP_BUNDLE_PATH }}
       - name: Upload artefact
         uses: actions/upload-artifact@v4
         with:
-          name: SubnetCalculator-${{env.VERSION}}-macOS.zip
-          path: ${{env.ARTEFACT_PATH}}
+          name: SubnetCalculator-${{env.VERSION}}-macOS
+          path: ${{ env.FINAL_APP_BUNDLE_PATH}}
