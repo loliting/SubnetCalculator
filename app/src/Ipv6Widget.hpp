@@ -29,17 +29,7 @@ namespace Ui {
 class Ipv6Widget;
 }
 
-class Ipv6InputEventFilter : public QObject
-{
-    Q_OBJECT
-private:
-    QSpinBox *cidrInput;
-    QLineEdit *ipv6AddressInput;
-protected:
-    bool eventFilter(QObject *obj, QEvent *event) override;
-public:
-    Ipv6InputEventFilter(QSpinBox* cidrInput, QLineEdit* ipv6AddressInput);
-};
+class IpInputEventFilter;
 
 class Ipv6Widget : public QWidget
 {
@@ -63,7 +53,7 @@ private slots:
     void on_calculate_clicked();
 private:
     Ui::Ipv6Widget *ui;
-    Ipv6InputEventFilter *inputFilter;
+    IpInputEventFilter *inputFilter;
 
     libSubnetCalculator::IPv6Network net;
     std::vector<libSubnetCalculator::IPv6Network> subnets;

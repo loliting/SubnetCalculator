@@ -28,18 +28,7 @@
 namespace Ui {
 class Ipv4Widget;
 }
-
-class Ipv4InputEventFilter : public QObject
-{
-    Q_OBJECT
-private:
-    QSpinBox *cidrInput;
-    QLineEdit *ipv4AddressInput;
-protected:
-    bool eventFilter(QObject *obj, QEvent *event) override;
-public:
-    Ipv4InputEventFilter(QSpinBox* cidrInput, QLineEdit* ipv4AddressInput);
-};
+class IpInputEventFilter;
 
 class Ipv4Widget : public QWidget
 {
@@ -65,7 +54,7 @@ private slots:
 
 private:
     Ui::Ipv4Widget *ui;
-    Ipv4InputEventFilter *inputFilter = nullptr;
+    IpInputEventFilter *inputFilter = nullptr;
 
     libSubnetCalculator::IPv4Address::Class lastIpv4Class;
     libSubnetCalculator::IPv4Network net;

@@ -25,7 +25,7 @@
 #include <QtWidgets/QFileDialog>
 
 #include "SaveAsDialog.hpp"
-
+#include "IpInputEventFilter.hpp"
 
 #define IPV6_REGEX                                                             \
   "^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:)"             \
@@ -42,61 +42,6 @@
 
 using namespace libSubnetCalculator;
 
-
-Ipv6InputEventFilter::Ipv6InputEventFilter(
-        QSpinBox* cidrInput,
-        QLineEdit* ipv6AddressInput) :
-    cidrInput(cidrInput),
-    ipv6AddressInput(ipv6AddressInput),
-    QObject(nullptr)
-{
-    
-}
-
-bool Ipv6InputEventFilter::eventFilter(QObject *obj, QEvent *event) {
-    if(event->type() == QEvent::KeyPress) {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-
-        if(keyEvent->key() == Qt::Key_Slash 
-        || keyEvent->key() == Qt::Key_Return
-        || keyEvent->key() == Qt::Key_Enter)
-        {
-            cidrInput->setFocus();
-            cidrInput->selectAll();
-            return true;
-        }
-        else if(keyEvent->key() == ' ') { // Try "jumping" to the next IPv6 octet
-            ssize_t len = ipv6AddressInput->text().length();
-            ipv6AddressInput->insert(":");
-            len -= ipv6AddressInput->text().length();
-            
-            // IPv4 mapped IPv6 address
-            ipv6AddressInput->insert(".");
-
-            // Check if current contents of ipv6AddressInput is valid, if so 
-            // jump to the cidr SpinBox instead
-            const QValidator *validator = ipv6AddressInput->validator();
-            QString str = ipv6AddressInput->text();
-            int pos = 0;
-            // If colon was now inserted we don't want to jump to SpinBox yet,
-            // because user may still append some octets at the end
-            bool wasColonInserted = len == -1;
-            if(validator->validate(str, pos) == QValidator::Acceptable
-            && !wasColonInserted)
-            {
-                cidrInput->setFocus();
-                cidrInput->selectAll();
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-
-    return QObject::eventFilter(obj, event);
-}
-
 Ipv6Widget::Ipv6Widget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::Ipv6Widget)
@@ -106,7 +51,30 @@ Ipv6Widget::Ipv6Widget(QWidget *parent) :
     ui->ipv6Address->setValidator(
         new QRegularExpressionValidator(QRegularExpression(IPV6_REGEX), this)
     );
-    inputFilter = new Ipv6InputEventFilter(ui->cidr, ui->ipv6Address);
+
+    inputFilter = new IpInputEventFilter(ui->cidr, [this]() -> void {
+        ssize_t len = ui->ipv6Address->text().length();
+        ui->ipv6Address->insert(":");
+        len -= ui->ipv6Address->text().length();
+        
+        // IPv4 mapped IPv6 address
+        ui->ipv6Address->insert(".");
+
+        // Check if current contents of ipv6Address is valid, if so 
+        // jump to the cidr SpinBox instead
+        const QValidator *validator = ui->ipv6Address->validator();
+        QString str = ui->ipv6Address->text();
+        int pos = 0;
+        // If colon was just inserted we don't want to jump to SpinBox yet,
+        // because user may still append some octets at the end
+        bool wasColonInserted = len == -1;
+        if(validator->validate(str, pos) == QValidator::Acceptable
+        && !wasColonInserted)
+        {
+            ui->cidr->setFocus();
+            ui->cidr->selectAll();
+        }
+    });
     ui->ipv6Address->installEventFilter(inputFilter);
 
     ui->subnetsTable->header()->setSectionResizeMode(0, QHeaderView::Fixed);

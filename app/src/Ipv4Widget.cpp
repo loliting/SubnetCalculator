@@ -25,54 +25,11 @@
 #include <QtWidgets/QFileDialog>
 
 #include "SaveAsDialog.hpp"
+#include "IpInputEventFilter.hpp"
 
 #define IPV4_REGEX "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)(\\.(?!$)|$)){3}(25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)$"
 
 using namespace libSubnetCalculator;
-
-Ipv4InputEventFilter::Ipv4InputEventFilter(
-        QSpinBox* cidrInput,
-        QLineEdit* ipv4AddressInput) :
-    cidrInput(cidrInput),
-    ipv4AddressInput(ipv4AddressInput),
-    QObject(nullptr)
-{
-    
-}
-
-bool Ipv4InputEventFilter::eventFilter(QObject *obj, QEvent *event) {
-    if(event->type() == QEvent::KeyPress) {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
-
-        if(keyEvent->key() == Qt::Key_Slash 
-        || keyEvent->key() == Qt::Key_Return
-        || keyEvent->key() == Qt::Key_Enter)
-        {
-            cidrInput->setFocus();
-            cidrInput->selectAll();
-            return true;
-        }
-        else if(keyEvent->key() == ' ') { // Try "jumping" to the next IPv4 octet
-            ipv4AddressInput->insert(".");
-
-            // Check if current contents of ipv6AddressInput is valid, if so 
-            // jump to the cidr SpinBox instead
-            const QValidator *validator = ipv4AddressInput->validator();
-            QString str = ipv4AddressInput->text();
-            int pos = 0;
-            if(validator->validate(str, pos) == QValidator::Acceptable) {
-                cidrInput->setFocus();
-                cidrInput->selectAll();
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-    
-    return QObject::eventFilter(obj, event);
-}
 
 Ipv4Widget::Ipv4Widget(QWidget *parent) :
     QWidget(parent),
@@ -85,7 +42,18 @@ Ipv4Widget::Ipv4Widget(QWidget *parent) :
     ui->ipv4Address->setValidator(
         new QRegularExpressionValidator(QRegularExpression(IPV4_REGEX), this)
     );
-    inputFilter = new Ipv4InputEventFilter(ui->cidr, ui->ipv4Address);
+    
+    inputFilter = new IpInputEventFilter(ui->cidr, [this]() -> void {
+        ui->ipv4Address->insert(".");
+
+        const QValidator *validator = ui->ipv4Address->validator();
+        QString str = ui->ipv4Address->text();
+        int pos = 0;
+        if(validator->validate(str, pos) == QValidator::Acceptable) {
+            ui->cidr->setFocus();
+            ui->cidr->selectAll();
+        }
+    });
     ui->ipv4Address->installEventFilter(inputFilter);
 
     ui->subnetsTable->header()->setSectionResizeMode(0, QHeaderView::Fixed);

@@ -18,6 +18,8 @@ set(SOURCES
     src/Application.hpp
     src/MainWindow.cpp
     src/MainWindow.hpp
+    src/IpInputEventFilter.cpp
+    src/IpInputEventFilter.hpp
     src/Ipv4Widget.hpp
     src/Ipv4Widget.cpp
     src/Ipv6Widget.hpp
