@@ -29,7 +29,7 @@ jobs:
                    cd ${GITHUB_WORKSPACE}/build/out
                    ditto -c -k --sequesterRsrc --keepParent "SubnetCalculator.app" SubnetCalculator-${{env.VERSION}}-macOS.zip
             - name: Upload artefact
-              uses: actions/upload-artifact@v2
+              uses: actions/upload-artifact@v4
               with:
                 name: SubnetCalculator-${{env.VERSION}}-macOS.zip
                 path: ${GITHUB_WORKSPACE}/build/out/SubnetCalculator-${{env.VERSION}}-macOS.zip
