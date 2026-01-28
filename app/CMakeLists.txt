@@ -1,4 +1,4 @@
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets LinguistTools)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
