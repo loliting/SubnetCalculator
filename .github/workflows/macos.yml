@@ -4,6 +4,7 @@ env:
   VERSION: ${{ github.sha }}
   FINAL_APP_BUNDLE_PATH: ${{ github.workspace}}/build/out/SubnetCalculator.app
   CODE_SIGN_CERTIFICATE_NAME: "Karol Maksymowicz Signing"
+  INSTALL_PREFIX: ${{ github.workspace}}/build/out
 jobs:
   build:
     runs-on: macos-latest
@@ -27,7 +28,7 @@ jobs:
              mkdir ${{ github.workspace}}/build
              cd ${{ github.workspace}}/build
              mkdir out
-             cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=./out "-DCODE_SIGN_CERT_NAME=${{ env.CODE_SIGN_CERTIFICATE_NAME }}" -G Ninja ..
+             cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${{env.INSTALL_PREFIX}} "-DCODE_SIGN_CERT_NAME=${{ env.CODE_SIGN_CERTIFICATE_NAME }}" -G Ninja ..
       - name: Compile
         run: |
              cd ${{ github.workspace}}/build
@@ -45,4 +46,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: SubnetCalculator-${{env.VERSION}}-macOS
-          path: ${{ env.FINAL_APP_BUNDLE_PATH}}/..
+          path: ${{ env.INSTALL_PREFIX}}
