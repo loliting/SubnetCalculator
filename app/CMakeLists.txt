@@ -37,6 +37,10 @@ set(SOURCES
     resources/res.qrc
 )
 
+set(TRANSLATIONS
+    translations/pl.ts
+)
+
 if(APPLE)
     set(MACOS_APP_ICON ${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.icns)
     set_source_files_properties(${MACOS_APP_ICON} PROPERTIES
@@ -51,6 +55,12 @@ qt_add_executable(SubnetCalculatorApp
     ${SOURCES}
     ${MACOS_APP_ICON}
     ${WIN32_RESOURCES}
+)
+
+qt_add_translations(SubnetCalculatorApp
+    RESOURCE_PREFIX /translations
+    TS_FILES ${TRANSLATIONS}
+    SOURCES ${SOURCES}
 )
 
 set_target_properties(SubnetCalculatorApp PROPERTIES
