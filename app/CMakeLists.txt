@@ -86,10 +86,19 @@ install(TARGETS SubnetCalculatorApp
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+set(deploy_tool_options_arg "")
+if(APPLE AND CODE_SIGN_CERT_NAME)
+    set(deploy_tool_options_arg
+        -hardened-runtime
+        "\"-codesign=${CODE_SIGN_CERT_NAME}\""
+    )
+endif()
+
 qt_generate_deploy_app_script(
     TARGET SubnetCalculatorApp
     OUTPUT_SCRIPT deploy_script
     NO_UNSUPPORTED_PLATFORM_ERROR
+    DEPLOY_TOOL_OPTIONS ${deploy_tool_options_arg}
 )
 
 install(SCRIPT ${deploy_script})
