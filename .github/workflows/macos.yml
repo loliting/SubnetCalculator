@@ -3,7 +3,6 @@ on: push
 env:
   VERSION: ${{ github.sha }}
   FINAL_APP_BUNDLE_PATH: ${{ github.workspace}}/build/out/SubnetCalculator.app
-  CODE_SIGN_CERTIFICATE_NAME: "Karol Maksymowicz Signing"
   INSTALL_PREFIX: ${{ github.workspace}}/build/out
 jobs:
   build:
@@ -28,7 +27,7 @@ jobs:
              mkdir ${{ github.workspace}}/build
              cd ${{ github.workspace}}/build
              mkdir out
-             cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${{env.INSTALL_PREFIX}} "-DCODE_SIGN_CERT_NAME=${{ env.CODE_SIGN_CERTIFICATE_NAME }}" -G Ninja ..
+             cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${{env.INSTALL_PREFIX}} "-DCODE_SIGN_CERT_NAME=${{ vars.CODE_SIGN_CERTIFICATE_NAME }}" -G Ninja ..
       - name: Compile
         run: |
              cd ${{ github.workspace}}/build
@@ -37,11 +36,11 @@ jobs:
         run: |
               cd ${{ github.workspace}}/build
               ninja install
-      - name: Code sign
-        run: |
-             xattr -cr ${{ env.FINAL_APP_BUNDLE_PATH }}
-             codesign --force --deep --options runtime --sign "${{ env.CODE_SIGN_CERTIFICATE_NAME }}" ${{ env.FINAL_APP_BUNDLE_PATH }}
-             codesign --verify --deep --verbose=4 ${{ env.FINAL_APP_BUNDLE_PATH }}
+      # - name: Code sign
+      #   run: |
+      #        xattr -cr ${{ env.FINAL_APP_BUNDLE_PATH }}
+      #        codesign --force --deep --options runtime --sign "${{ vars.CODE_SIGN_CERTIFICATE_NAME }}" ${{ env.FINAL_APP_BUNDLE_PATH }}
+      #        codesign --verify --deep --verbose=4 ${{ env.FINAL_APP_BUNDLE_PATH }}
       - name: Upload artefact
         uses: actions/upload-artifact@v4
         with:
