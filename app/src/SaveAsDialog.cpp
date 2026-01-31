@@ -15,7 +15,7 @@ SaveAsDialog::SaveAsDialog(bool hasSubnets, QWidget *parent) :
     encodingStrings[UTF16LE_BOM] = "UTF-16LE BOM";
     encodingStrings[UTF16LE] = "UTF-16LE";
     encodingStrings[UTF32BE_BOM] = "UTF-32BE BOM";
-    encodingStrings[UTF32BE] = "UTF-32E";
+    encodingStrings[UTF32BE] = "UTF-32BE";
     encodingStrings[UTF32LE_BOM] = "UTF-32LE BOM";
     encodingStrings[UTF32LE] = "UTF-32LE";
     ui->encoding->addItems(encodingStrings);
