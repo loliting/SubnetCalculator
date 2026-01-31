@@ -43,7 +43,7 @@ jobs:
              mkdir ${{ env.BUILD_DIR}}
              cd ${{ env.BUILD_DIR}}
              mkdir -p ${{ env.INSTALL_PREFIX }}
-             cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }} ${{matrix.ADDITIONAL_CMAKE_FLAGS}} -G Ninja ..
+             cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }} ${{matrix.ADDITIONAL_CMAKE_FLAGS}} -G Ninja ..
       - name: Compile
         run: |
              cd ${{ env.BUILD_DIR}}
