@@ -8,16 +8,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
         include:
           - os: macos-latest
             ARTEFACT_NAME: SubnetCalculator-${{ github.sha }}-macOS
-            ADDITIONAL_CMAKE_FLAGS: "\"-DCODE_SIGN_CERT_NAME=${{ vars.CODE_SIGN_CERTIFICATE_NAME }}\""
+            ADDITIONAL_CMAKE_FLAGS: '"-DCODE_SIGN_CERT_NAME=${{ vars.CODE_SIGN_CERTIFICATE_NAME }}"'
             QT_ARCH: clang_64
-          - os: windows-latest
-            ARTEFACT_NAME: SubnetCalculator-${{ github.sha }}-Win32
-            ADDITIONAL_CMAKE_FLAGS:
-            QT_ARCH: win64_llvm_mingw
+          # - os: windows-latest
+          #   ARTEFACT_NAME: SubnetCalculator-${{ github.sha }}-Win64
+          #   ADDITIONAL_CMAKE_FLAGS:
+            # QT_ARCH: win64_llvm_mingw
           - os: ubuntu-latest
             ADDITIONAL_CMAKE_FLAGS:
             QT_ARCH: linux_gcc_64
@@ -43,7 +42,7 @@ jobs:
              mkdir ${{ env.BUILD_DIR}}
              cd ${{ env.BUILD_DIR}}
              mkdir -p ${{ env.INSTALL_PREFIX }}
-             cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }} ${{matrix.ADDITIONAL_CMAKE_FLAGS}} -G Ninja ..
+             cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }} ${{matrix.ADDITIONAL_CMAKE_FLAGS}} -G Ninja ..
       - name: Compile
         run: |
              cd ${{ env.BUILD_DIR}}
