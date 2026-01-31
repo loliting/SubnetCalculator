@@ -1,0 +1,56 @@
+name: ci (linux/macos/windows builds)
+on: push
+env:
+  BUILD_DIR: ${{ github.workspace }}/build/
+  INSTALL_PREFIX: ${{ github.workspace }}/build/out/
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: macos-latest
+            ARTEFACT_NAME: SubnetCalculator-${{ github.sha }}-macOS
+            ADDITIONAL_CMAKE_FLAGS: "-DCODE_SIGN_CERT_NAME=${{ vars.CODE_SIGN_CERTIFICATE_NAME }}"
+          - os: windows-latest
+            ARTEFACT_NAME: SubnetCalculator-${{ github.sha }}-Win32
+            ADDITIONAL_CMAKE_FLAGS:
+          - os: ubuntu-latest
+            ADDITIONAL_CMAKE_FLAGS:
+    steps:
+      - name: Import Codesign Cert
+        uses: apple-actions/import-codesign-certs@v3
+        with: 
+          p12-file-base64: ${{ secrets.CODE_SIGN_CERTIFICATE_FILE_BASE64 }}
+          p12-password: ${{ secrets.CODE_SIGN_CERTIFICATE_PASSWORD }}
+        if: ${{ runner.os == 'macOS' }}
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: 6.10.*
+          cache: true
+      - name: Configure
+        run: |
+             mkdir ${{ env.BUILD_DIR}}
+             cd ${{ env.BUILD_DIR}}
+             mkdir -p ${{ env.INSTALL_PREFIX }}
+             cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }} ${{matrix.ADDITIONAL_CMAKE_FLAGS}} -G Ninja ..
+      - name: Compile
+        run: |
+             cd ${{ env.BUILD_DIR}}
+             ninja
+      - name: Deploy
+        run: |
+             cd ${{ env.BUILD_DIR}}
+             ninja install
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.ARTEFACT_NAME }}
+          path: ${{ env.INSTALL_PREFIX }}
+        if: ${{ matrix.os == 'macos-latest' || matrix.os == 'windows-latest'}}
