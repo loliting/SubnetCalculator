@@ -13,11 +13,14 @@ jobs:
           - os: macos-latest
             ARTEFACT_NAME: SubnetCalculator-${{ github.sha }}-macOS
             ADDITIONAL_CMAKE_FLAGS: "\"-DCODE_SIGN_CERT_NAME=${{ vars.CODE_SIGN_CERTIFICATE_NAME }}\""
+            QT_ARCH: clang_64
           - os: windows-latest
             ARTEFACT_NAME: SubnetCalculator-${{ github.sha }}-Win32
             ADDITIONAL_CMAKE_FLAGS:
+            QT_ARCH: win64_mingw
           - os: ubuntu-latest
             ADDITIONAL_CMAKE_FLAGS:
+            QT_ARCH: linux_gcc_64
     steps:
       - name: Import Codesign Cert
         uses: apple-actions/import-codesign-certs@v3
@@ -34,6 +37,7 @@ jobs:
         with:
           version: 6.10.*
           cache: true
+          arch: ${{ matrix.QT_ARCH }}
       - name: Configure
         run: |
              mkdir ${{ env.BUILD_DIR}}
