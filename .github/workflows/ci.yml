@@ -17,7 +17,7 @@ jobs:
           - os: windows-latest
             ARTEFACT_NAME: SubnetCalculator-${{ github.sha }}-Win32
             ADDITIONAL_CMAKE_FLAGS:
-            QT_ARCH: win64_mingw
+            QT_ARCH: win64_llvm_mingw
           - os: ubuntu-latest
             ADDITIONAL_CMAKE_FLAGS:
             QT_ARCH: linux_gcc_64
