@@ -12,7 +12,7 @@ jobs:
         include:
           - os: macos-latest
             ARTEFACT_NAME: SubnetCalculator-${{ github.sha }}-macOS
-            ADDITIONAL_CMAKE_FLAGS: "-DCODE_SIGN_CERT_NAME=${{ vars.CODE_SIGN_CERTIFICATE_NAME }}"
+            ADDITIONAL_CMAKE_FLAGS: "\"-DCODE_SIGN_CERT_NAME=${{ vars.CODE_SIGN_CERTIFICATE_NAME }}\""
           - os: windows-latest
             ARTEFACT_NAME: SubnetCalculator-${{ github.sha }}-Win32
             ADDITIONAL_CMAKE_FLAGS:
