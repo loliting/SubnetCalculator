@@ -55,5 +55,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.ARTEFACT_NAME }}
-          path: ${{ env.INSTALL_PREFIX }}
-        if: ${{ matrix.os == 'macos-latest' || matrix.os == 'windows-latest'}}
+          path: ${{ env.INSTALL_PREFIX }}//*.dmg
+        if: ${{ matrix.os == 'macos-latest' }}

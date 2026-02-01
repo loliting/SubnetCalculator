@@ -91,7 +91,8 @@ set(deploy_tool_options_arg "")
 if(APPLE AND CODE_SIGN_CERT_NAME)
     set(deploy_tool_options_arg
         -hardened-runtime
-        "\"-codesign=${CODE_SIGN_CERT_NAME}\""
+        "\"-sign-for-notarization==${CODE_SIGN_CERT_NAME}\""
+        -dmg
     )
 endif()
 
