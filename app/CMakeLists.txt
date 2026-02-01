@@ -92,7 +92,7 @@ if(APPLE AND CODE_SIGN_CERT_NAME)
     set(deploy_tool_options_arg
         -hardened-runtime
         -appstore-compliant
-        "\"-codesign==${CODE_SIGN_CERT_NAME}\""
+        "\"-codesign=${CODE_SIGN_CERT_NAME}\""
         -timestamp
         -dmg
     )
