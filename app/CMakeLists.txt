@@ -91,7 +91,9 @@ set(deploy_tool_options_arg "")
 if(APPLE AND CODE_SIGN_CERT_NAME)
     set(deploy_tool_options_arg
         -hardened-runtime
-        "\"-sign-for-notarization==${CODE_SIGN_CERT_NAME}\""
+        -appstore-compliant
+        "\"-codesign==${CODE_SIGN_CERT_NAME}\""
+        -timestamp
         -dmg
     )
 endif()
