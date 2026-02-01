@@ -15,35 +15,44 @@
 // along with this program; if not, If not,
 // see <https://www.gnu.org/licenses/>.
 
-#ifndef IPV6WIDGET_HPP
-#define IPV6WIDGET_HPP
+#ifndef ABSTRACTIPWIDGET_HPP
+#define ABSTRACTIPWIDGET_HPP
 
 #include <QtWidgets/QWidget>
 
-#include <libSubnetCalculator.hpp>
+namespace Ui {
+    class AbstractIpWidget;
+}
 
-#include "AbstractIpWidget.hpp"
+class QTreeWidgetItem;
 
-class IpInputEventFilter;
-
-class Ipv6Widget : public AbstractIpWidget
+class AbstractIpWidget : public QWidget
 {
     Q_OBJECT
 public:
-    explicit Ipv6Widget(QWidget *parent = nullptr);
-    ~Ipv6Widget();
-public slots:
-    void update(bool updateTableContents) override;
-private slots:
-    void updateSubnetCountRange();
-private:
-    QString getIpv6RoutingPrefix(libSubnetCalculator::IPv6Network&);
-    QString getIpv6RangeString(libSubnetCalculator::IPv6Network&);
-private:
-    IpInputEventFilter *inputFilter;
+    explicit AbstractIpWidget(QWidget *parent = nullptr);
+    ~AbstractIpWidget();
 
-    libSubnetCalculator::IPv6Network net;
-    std::vector<libSubnetCalculator::IPv6Network> subnets;
+    bool canSaveTable();
+signals:
+    void saveTableAvaliable(bool);
+public slots:
+    virtual void update(bool updateTableContents) = 0;
+    void saveAsCsvTable();
+    bool copy();
+    void cut();
+    void paste();
+protected slots:
+    void setSaveTableAvaliable(bool);
+private slots:
+    void _update(bool buttonSender);
+protected:
+    QTreeWidgetItem* const getItemTemplate() const { return itemTemplate; }
+protected:
+    Ui::AbstractIpWidget *ui;
+private:
+    bool isSaveTableAvaliable = false;
+    QTreeWidgetItem* itemTemplate = nullptr;
 };
 
-#endif // IPV6WIDGET_HPP
+#endif // ABSTRACTIPWIDGET_HPP

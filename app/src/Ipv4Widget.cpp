@@ -1,5 +1,5 @@
 // This file is part of Subnet Calculator.
-// Copyright (C) 2024 Karol Maksymowicz
+// Copyright (C) 2026 Karol Maksymowicz
 //
 // Subnet Calculator is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,184 +16,102 @@
 // see <https://www.gnu.org/licenses/>.
 
 #include "Ipv4Widget.hpp"
-#include "ui_Ipv4Widget.h"
+#include "ui_AbstractIpWidget.h"
 
-#include <QtCore/QFile>
-#include <QtGui/QKeyEvent>
-#include <QtWidgets/QMessageBox>
-#include <QtWidgets/QHeaderView>
-#include <QtWidgets/QFileDialog>
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
+#include <QMessageBox>
 
-#include "SaveAsDialog.hpp"
 #include "IpInputEventFilter.hpp"
 
 #define IPV4_REGEX "^((25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)(\\.(?!$)|$)){3}(25[0-5]|(2[0-4]|1\\d|[1-9]|)\\d)$"
 
 using namespace libSubnetCalculator;
 
-Ipv4Widget::Ipv4Widget(QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::Ipv4Widget),
-    // Initializate `lastIpv4Class` with non-existing class
-    lastIpv4Class((IPv4Address::Class)(-1))
+Ipv4Widget::Ipv4Widget(QWidget* parent) :
+    lastIpv4Class((IPv4Address::Class)-1),
+    AbstractIpWidget(parent)
 {
-    ui->setupUi(this);
+    ui->subnetsTable->setHeaderLabels(QStringList()
+        << tr("No.")
+        << tr("Network Address")
+        << tr("Range")
+        << tr("Broadcast Address")
+        << tr("Subnet Mask")
+        << tr("Host Count")
+    );
 
-    ui->ipv4Address->setValidator(
+    ui->addressInput->setValidator(
         new QRegularExpressionValidator(QRegularExpression(IPV4_REGEX), this)
     );
     
-    inputFilter = new IpInputEventFilter(ui->cidr, [this]() -> void {
-        ui->ipv4Address->insert(".");
+    inputFilter = new IpInputEventFilter(ui->cidrInput, [this]() -> void {
+        ui->addressInput->insert(".");
 
-        const QValidator *validator = ui->ipv4Address->validator();
-        QString str = ui->ipv4Address->text();
+        const QValidator *validator = ui->addressInput->validator();
+        QString str = ui->addressInput->text();
         int pos = 0;
         if(validator->validate(str, pos) == QValidator::Acceptable) {
-            ui->cidr->setFocus();
-            ui->cidr->selectAll();
+            ui->cidrInput->setFocus();
+            ui->cidrInput->selectAll();
         }
     });
-    ui->ipv4Address->installEventFilter(inputFilter);
-
-    ui->subnetsTable->header()->setSectionResizeMode(0, QHeaderView::Fixed);
-    ui->subnetsTable->setColumnWidth(0, 0);
-    
-    ui->calculate->hide();
+    ui->addressInput->installEventFilter(inputFilter);
+    ui->addressInput->setPlaceholderText("10.20.30.40");
 }
 
-Ipv4Widget::~Ipv4Widget() {
+Ipv4Widget::~Ipv4Widget(){
     inputFilter->deleteLater();
-
-    delete ui;
+    inputFilter = nullptr;
 }
 
 
-/* UI signal handlers slots */
-void Ipv4Widget::on_ipv4Address_textEdited(const QString) {
-    updateIpv4AddressClassTooltip();
-    update();
-}
-
-void Ipv4Widget::on_cidr_valueChanged(int) {
-    update();
-}
-
-void Ipv4Widget::on_subnetCount_currentIndexChanged(int index) {
-    update();
-}
-
-void Ipv4Widget::on_calculate_clicked() {
-    updateTableContent();
-    emit saveTableAvaliable(isSaveTableAvaliable);
-}
-
-
-void Ipv4Widget::updateIpv4AddressClassTooltip() {
-    IPv4Address::Class ipv4Class;
-    try {
-        ipv4Class = IPv4Address(ui->ipv4Address->text().toStdString()).getClass();
+QString Ipv4Widget::getNetworkAddressString(IPv4Network &net) {
+    switch (net.CIDR()){
+    case 31:
+        return tr("N/A\nPoint-to-Point Link\n(RFC 3021)");
+    case 32:
+        return tr("N/A\n(Host Route)");
+    default:
+        return QString::fromStdString(net.networkAddress().toString());
     }
-    catch(InvalidAddressException& e) {
-        return;
-    }
-    catch(libSubnetCalculatorException& e) {
-        qWarning() << "Unknown libSubnetCalculatorException";
-        return;
-    }
-
-    if(lastIpv4Class == ipv4Class)
-        return;
-    lastIpv4Class = ipv4Class;
-
-    ui->cidr->blockSignals(true);
-    switch(ipv4Class) {
-    case IPv4Address::Class::A:
-        ui->ipv4Address->setToolTip(tr("Class A"));
-        ui->cidr->setValue(8);
-        break;
-    case IPv4Address::Class::B:
-        ui->ipv4Address->setToolTip(tr("Class B"));
-        ui->cidr->setValue(16);
-        break;
-    case IPv4Address::Class::C:
-        ui->ipv4Address->setToolTip(tr("Class C"));
-        ui->cidr->setValue(24);
-        break;
-    case IPv4Address::Class::D:
-        ui->ipv4Address->setToolTip(tr("Class D"));
-        ui->cidr->setValue(4);
-        break;
-    case IPv4Address::Class::E:
-        ui->ipv4Address->setToolTip(tr("Class E"));
-        ui->cidr->setValue(4);
-        break;
-    }
-    ui->cidr->blockSignals(false);
 }
 
-void Ipv4Widget::updateSubnetCountRange() {
-    ui->subnetCount->blockSignals(true);
-
-    int currentSubnetCountIndex = ui->subnetCount->currentIndex();
-    ui->subnetCount->clear();
-    ui->subnetCount->addItem(QString::number(1));
-
-    if(ui->ipv4Address->hasAcceptableInput()) {
-        uint32_t ipCount = pow(2, 32 - ui->cidr->value() - 1);
-        for(uint32_t i = 2; i < ipCount; i *= 2)
-            ui->subnetCount->addItem(QString::number(i));
-    }
-
-    ui->subnetCount->setCurrentIndex(
-        qMin(currentSubnetCountIndex, ui->subnetCount->count() - 1)
-    );
-
-    ui->subnetCount->blockSignals(false);
+QString Ipv4Widget::getIpv4RangeString(IPv4Network &net) {
+    if(net.CIDR() == 32)
+        return QString::fromStdString(net.host(0).toString());
+    return QString::fromStdString(net.host(0).toString()
+              + "\n-\n"
+              + net.host(net.hostCount() - 1).toString());
 }
 
-void Ipv4Widget::updateTableContent() {
-    auto getNetworkAddressString = [=](IPv4Network &net) {
-        switch (net.CIDR()){
-        case 31:
-            return tr("N/A\nPoint-to-Point Link\n(RFC 3021)");
-        case 32:
-            return tr("N/A\n(Host Route)");
-        default:
-            return QString::fromStdString(net.networkAddress().toString());
-        }
-    };
-    auto getIpv4RangeString = [=](IPv4Network &net) {
-        if(net.CIDR() == 32)
-            return QString::fromStdString(net.host(0).toString());
-        return QString::fromStdString(net.host(0).toString())
-             + "\n-\n"
-             + QString::fromStdString(net.host(net.hostCount() - 1).toString());
-    };
-    auto getBroadcastAddressString = [=](IPv4Network &net) {
-        switch (net.CIDR()){
-        case 32:
-            return tr("N/A\n(Host Route)");
-        case 31:
-            return tr("N/A\nPoint-to-Point Link\n(RFC 3021)");
-        default:
-            return QString::fromStdString(net.broadcastAddress().toString());
-        }
-    };
-    auto getMaskString = [=](IPv4Network &net) {
-        return QString::fromStdString(net.subnetMask().toString())
-            + "\n(/" + QString::number(net.CIDR()) + ")";
-    };
+QString Ipv4Widget::getBroadcastAddressString(IPv4Network &net) {
+    switch (net.CIDR()){
+    case 32:
+        return tr("N/A\n(Host Route)");
+    case 31:
+        return tr("N/A\nPoint-to-Point Link\n(RFC 3021)");
+    default:
+        return QString::fromStdString(net.broadcastAddress().toString());
+    }
+}
+
+QString Ipv4Widget::getMaskString(IPv4Network &net) {
+    return QString::fromStdString(net.subnetMask().toString())
+        + "\n(/" + QString::number(net.CIDR()) + ")";
+}
 
 
-    isSaveTableAvaliable = false;
-    ui->subnetsTable->clear();
-    uint32_t subnetCount = qMax<uint32_t>(pow(2, ui->subnetCount->currentIndex()), 1);
+void Ipv4Widget::update(bool updateTableContents) {
+    updateIpv4AddressClassToolTip();
+    updateSubnetCountRange();
+    if(!updateTableContents) return;
 
+    uint32_t subnetCount = qMax<uint32_t>(pow(2, ui->subnetCountInput->currentIndex()), 1);
     try {
         net = IPv4Network(
-            IPv4Address(ui->ipv4Address->text().toStdString()),
-            ui->cidr->value()
+            IPv4Address(ui->addressInput->text().toStdString()),
+            ui->cidrInput->value()
         );
         subnets = net.getSubnets(subnetCount);
     }
@@ -212,150 +130,91 @@ void Ipv4Widget::updateTableContent() {
         return;
     }
 
+    QTreeWidgetItem *rootItem = new QTreeWidgetItem(*getItemTemplate());
+    ui->subnetsTable->addTopLevelItem(rootItem);
 
-    isSaveTableAvaliable = true;
-    QTreeWidgetItem *rootItem = new QTreeWidgetItem(ui->subnetsTable);
     rootItem->setText(1, getNetworkAddressString(net));
     rootItem->setText(2, getIpv4RangeString(net));
     rootItem->setText(3, getBroadcastAddressString(net));
     rootItem->setText(4, getMaskString(net));
     rootItem->setText(5, QString::number(net.hostCount()));
-    for(int i = 0; i < 6; ++i)
-        rootItem->setTextAlignment(i, Qt::AlignCenter);
 
     if(subnetCount > 1) {
-        rootItem->setExpanded(true);
-
-        QFontMetrics subnetIdFontMetrics = ui->subnetsTable->fontMetrics();
-        int subnetIdFontWidth = subnetIdFontMetrics.horizontalAdvance(
-            QString::number(subnetCount)
-        );
-        ui->subnetsTable->setColumnWidth(0, 60 + subnetIdFontWidth);
-
         for(int i = 0; i < subnets.size(); ++i) {
-            QTreeWidgetItem *item = new QTreeWidgetItem(rootItem);
-            item->setText(0, QString::number(i + 1));
-            item->setTextAlignment(0, Qt::AlignRight);
+            QTreeWidgetItem *item = new QTreeWidgetItem(*getItemTemplate());
+            rootItem->addChild(item);
 
+            item->setText(0, QString::number(i + 1));
             item->setText(1, getNetworkAddressString(subnets.at(i)));
             item->setText(2, getIpv4RangeString(subnets.at(i)));
             item->setText(3, getBroadcastAddressString(subnets.at(i)));
             item->setText(4, getMaskString(subnets.at(i)));
             item->setText(5, QString::number(subnets.at(i).hostCount()));
-            
-            for(int j = 1; j < 6; ++j)
-                item->setTextAlignment(j, Qt::AlignCenter);
         }
     }
+    setSaveTableAvaliable(true);
 }
 
-void Ipv4Widget::update() {
-    updateSubnetCountRange();
+void Ipv4Widget::updateSubnetCountRange() {
+    ui->subnetCountInput->blockSignals(true);
 
-    ui->subnetsTable->setColumnWidth(0, 0);
-    ui->subnetsTable->clear();
-    isSaveTableAvaliable = false;
-    if(ui->subnetCount->currentIndex() > 8)
-        ui->calculate->show();
-    else {
-        ui->calculate->hide();
-        updateTableContent();
+    int currentSubnetCountIndex = ui->subnetCountInput->currentIndex();
+    ui->subnetCountInput->clear();
+    ui->subnetCountInput->addItem(QString::number(1));
+
+    if(ui->addressInput->hasAcceptableInput()) {
+        uint32_t ipCount = pow(2, 32 - ui->cidrInput->value() - 1);
+        for(uint32_t i = 2; i < ipCount; i *= 2)
+            ui->subnetCountInput->addItem(QString::number(i));
     }
 
-    emit saveTableAvaliable(isSaveTableAvaliable);
+    ui->subnetCountInput->setCurrentIndex(
+        qMin(currentSubnetCountIndex, ui->subnetCountInput->count() - 1)
+    );
+
+    ui->subnetCountInput->blockSignals(false);
 }
 
-bool Ipv4Widget::canSaveTable() {
-    return isSaveTableAvaliable;
-}
-
-void Ipv4Widget::saveTable() {
-    SaveAsDialog dialog(subnets.size() > 1, this);
-    dialog.exec();
-    if(!dialog.result().has_value())
+void Ipv4Widget::updateIpv4AddressClassToolTip() {
+    IPv4Address::Class ipv4Class;
+    try {
+        ipv4Class = IPv4Address(ui->addressInput->text().toStdString()).getClass();
+    }
+    catch(InvalidAddressException& e) {
+        ui->addressInput->setToolTip("");
+        lastIpv4Class = (IPv4Address::Class)-1;
         return;
-        
-    auto opt = dialog.result().value();
-
-    QStringConverter::Encoding encoding;
-
-    switch (opt.encoding & ~CsvEncoding::BOM_FLAG) {
-    case CsvEncoding::UTF8:
-        encoding = QStringConverter::Encoding::Utf8;
-        break;
-    case CsvEncoding::UTF16BE:
-        encoding = QStringConverter::Encoding::Utf16BE;
-        break;
-    case CsvEncoding::UTF16LE:
-        encoding = QStringConverter::Encoding::Utf16LE;
-    case CsvEncoding::UTF32BE:
-        encoding = QStringConverter::Encoding::Utf32BE;
-        break;
-    case CsvEncoding::UTF32LE:
-        encoding = QStringConverter::Encoding::Utf32LE;
-        break;
-    default:
-        assert(0); // Unreachable
-        break;
     }
-
-    QFileDialog fileDialog(this, tr("Save table"), QString(), tr("(*.csv)"));
-    fileDialog.setFileMode(QFileDialog::FileMode::AnyFile);
-    fileDialog.setAcceptMode(QFileDialog::AcceptMode::AcceptSave);
-    if(fileDialog.exec() == QDialog::Rejected)
+    catch(libSubnetCalculatorException& e) {
         return;
-
-    QString savePath = fileDialog.selectedFiles()[0];
-    QFile f(savePath);
-    f.open(QIODevice::WriteOnly);
-    
-    QTextStream stream(&f);
-    stream.setEncoding(encoding);
-    stream.setGenerateByteOrderMark(opt.encoding & CsvEncoding::BOM_FLAG);
-
-    int columnCount = ui->subnetsTable->columnCount();
-    for(int i = 1; opt.saveHeaderNames && i < columnCount; ++i)
-        stream << opt.delimiter 
-               << ui->subnetsTable->headerItem()->text(i)
-               << opt.delimiter
-               << ((i == columnCount - 1) ? "\r\n" : opt.separator);
-    
-    for(int i = 1; opt.saveRootNet && i < columnCount; ++i)
-        stream << opt.delimiter
-               << ui->subnetsTable->itemAt(0, 0)->text(i)
-               << opt.delimiter
-               << ((i == columnCount - 1) ? "\r\n" : opt.separator);
-    
-    if(opt.saveSubnetsSeparator) {
-        stream << opt.delimiter
-               << tr("Subnets:")
-               << opt.delimiter
-               << opt.separator;
-
-        for(int i = 2; i < columnCount; ++i)
-            stream << opt.delimiter
-                   << opt.delimiter 
-                   << ((i == columnCount - 1) ? "\r\n" : opt.separator);
     }
 
-    auto items = ui->subnetsTable->itemAt(0, 0);
-    for(unsigned i = 0; i < items->childCount(); ++i) {
-        auto item = items->child(i);
-        for(int i = 1; i < columnCount; ++i)
-            stream << opt.delimiter
-                   << item->text(i)
-                   << opt.delimiter
-                   << ((i == columnCount - 1) ? "\r\n" : opt.separator);
+    if(lastIpv4Class == ipv4Class)
+        return;
+    lastIpv4Class = ipv4Class;
+
+    ui->cidrInput->blockSignals(true);
+    switch(ipv4Class) {
+    case IPv4Address::Class::A:
+        ui->addressInput->setToolTip(tr("Class A"));
+        ui->cidrInput->setValue(8);
+        break;
+    case IPv4Address::Class::B:
+        ui->addressInput->setToolTip(tr("Class B"));
+        ui->cidrInput->setValue(16);
+        break;
+    case IPv4Address::Class::C:
+        ui->addressInput->setToolTip(tr("Class C"));
+        ui->cidrInput->setValue(24);
+        break;
+    case IPv4Address::Class::D:
+        ui->addressInput->setToolTip(tr("Class D"));
+        ui->cidrInput->setValue(4);
+        break;
+    case IPv4Address::Class::E:
+        ui->addressInput->setToolTip(tr("Class E"));
+        ui->cidrInput->setValue(4);
+        break;
     }
-    
-
-    stream.flush();
-    f.close();
-
-    if(f.error() != QFileDevice::NoError)
-        QMessageBox(QMessageBox::Critical,
-                    tr("IO error"),
-                    tr("Failed to save table. ") + f.errorString()
-        ).exec();
-    
+    ui->cidrInput->blockSignals(false);
 }

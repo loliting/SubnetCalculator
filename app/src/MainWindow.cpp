@@ -18,8 +18,7 @@
 #include "MainWindow.hpp"
 #include "ui_MainWindow.h"
 
-#include "Ipv4Widget.hpp"
-#include "Ipv6Widget.hpp"
+#include "AbstractIpWidget.hpp"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -28,14 +27,22 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     setWindowIcon(QIcon(":/icon.png"));
 
-    ui->actionSave_Table_As->setDisabled(true);
-    connect(ui->ipv4, &Ipv4Widget::saveTableAvaliable,
+    connect((AbstractIpWidget*)ui->ipv4, &AbstractIpWidget::saveTableAvaliable,
         this, &MainWindow::updateActionSaveTableState
     );
-    connect(ui->ipv6, &Ipv6Widget::saveTableAvaliable,
+    connect((AbstractIpWidget*)ui->ipv6, &AbstractIpWidget::saveTableAvaliable,
         this, &MainWindow::updateActionSaveTableState
     );
 
+    connect(ui->actionCut, &QAction::triggered,
+        this, &MainWindow::cut
+    );
+    connect(ui->actionCopy, &QAction::triggered,
+        this, &MainWindow::copy
+    );
+    connect(ui->actionPaste, &QAction::triggered,
+        this, &MainWindow::paste
+    );
 }
 
 MainWindow::~MainWindow() {
@@ -43,19 +50,35 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::updateActionSaveTableState() {
-    if(ui->ipv4->isVisible())
-        ui->actionSave_Table_As->setEnabled(ui->ipv4->canSaveTable());
-    else
-        ui->actionSave_Table_As->setEnabled(ui->ipv6->canSaveTable());
+    AbstractIpWidget* ipWidget = dynamic_cast<AbstractIpWidget*>(ui->tabWidget->currentWidget());
+    assert(ipWidget);
+    ui->actionSaveTableAs->setEnabled(ipWidget->canSaveTable());
 }
 
 void MainWindow::on_tabWidget_currentChanged(int index) {
     updateActionSaveTableState();
 }
 
-void MainWindow::on_actionSave_Table_As_triggered() {
-    if(ui->ipv4->isVisible())
-        ui->ipv4->saveTable();
-    else
-        ui->ipv6->saveTable();
+void MainWindow::on_actionSaveTableAs_triggered() {
+    AbstractIpWidget* ipWidget = dynamic_cast<AbstractIpWidget*>(ui->tabWidget->currentWidget());
+    assert(ipWidget);
+    ipWidget->saveAsCsvTable();
+}
+
+void MainWindow::copy() {
+    AbstractIpWidget* ipWidget = dynamic_cast<AbstractIpWidget*>(ui->tabWidget->currentWidget());
+    assert(ipWidget);
+    ipWidget->copy();
+}
+
+void MainWindow::cut() {
+    AbstractIpWidget* ipWidget = dynamic_cast<AbstractIpWidget*>(ui->tabWidget->currentWidget());
+    assert(ipWidget);
+    ipWidget->cut();
+}
+
+void MainWindow::paste() {
+    AbstractIpWidget* ipWidget = dynamic_cast<AbstractIpWidget*>(ui->tabWidget->currentWidget());
+    assert(ipWidget);
+    ipWidget->paste();
 }

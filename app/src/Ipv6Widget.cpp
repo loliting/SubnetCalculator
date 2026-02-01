@@ -1,5 +1,5 @@
 // This file is part of Subnet Calculator.
-// Copyright (C) 2024 Karol Maksymowicz
+// Copyright (C) 2026 Karol Maksymowicz
 //
 // Subnet Calculator is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,13 +16,9 @@
 // see <https://www.gnu.org/licenses/>.
 
 #include "Ipv6Widget.hpp"
-#include "ui_Ipv6Widget.h"
+#include "ui_AbstractIpWidget.h"
 
-#include <QtCore/QFile>
-#include <QtGui/QKeyEvent>
-#include <QtWidgets/QMessageBox>
-#include <QtWidgets/QHeaderView>
-#include <QtWidgets/QFileDialog>
+#include <QMessageBox>
 
 #include "SaveAsDialog.hpp"
 #include "IpInputEventFilter.hpp"
@@ -42,143 +38,84 @@
 
 using namespace libSubnetCalculator;
 
-Ipv6Widget::Ipv6Widget(QWidget *parent) :
-    QWidget(parent),
-    ui(new Ui::Ipv6Widget)
+Ipv6Widget::Ipv6Widget(QWidget* parent) :
+    AbstractIpWidget(parent)
 {
-    ui->setupUi(this);
+    ui->subnetsTable->setHeaderLabels(QStringList()
+        << tr("No.")
+        << tr("Routing Prefix")
+        << tr("Range")
+        << tr("Prefix Length (CIDR)")
+        << tr("Host Count")
+    );
 
-    ui->ipv6Address->setValidator(
+    ui->addressInput->setValidator(
         new QRegularExpressionValidator(QRegularExpression(IPV6_REGEX), this)
     );
 
-    inputFilter = new IpInputEventFilter(ui->cidr, [this]() -> void {
-        ssize_t len = ui->ipv6Address->text().length();
-        ui->ipv6Address->insert(":");
-        len -= ui->ipv6Address->text().length();
+    inputFilter = new IpInputEventFilter(ui->cidrInput, [this]() -> void {
+        ssize_t len = ui->addressInput->text().length();
+        ui->addressInput->insert(":");
+        len -= ui->addressInput->text().length();
         
         // IPv4 mapped IPv6 address
-        ui->ipv6Address->insert(".");
+        ui->addressInput->insert(".");
 
         // Check if current contents of ipv6Address is valid, if so 
         // jump to the cidr SpinBox instead
-        const QValidator *validator = ui->ipv6Address->validator();
-        QString str = ui->ipv6Address->text();
+        const QValidator *validator = ui->addressInput->validator();
+        QString str = ui->addressInput->text();
         int pos = 0;
         // If colon was just inserted we don't want to jump to SpinBox yet,
         // because user may still append some octets at the end
         bool wasColonInserted = len == -1;
         if(validator->validate(str, pos) == QValidator::Acceptable
-        && !wasColonInserted)
+           && !wasColonInserted)
         {
-            ui->cidr->setFocus();
-            ui->cidr->selectAll();
+            ui->cidrInput->setFocus();
+            ui->cidrInput->selectAll();
         }
     });
-    ui->ipv6Address->installEventFilter(inputFilter);
+    ui->addressInput->installEventFilter(inputFilter);
+    ui->addressInput->setPlaceholderText("2001:0db8:85a3::8a2e:0370:7334");
+    ui->addressInput->setMinimumWidth(300);
 
-    ui->subnetsTable->header()->setSectionResizeMode(0, QHeaderView::Fixed);
-    ui->subnetsTable->header()->setMinimumWidth(3);
-    ui->subnetsTable->setColumnWidth(0, 0);
-    
-    ui->calculate->hide();
+    ui->cidrInput->setMaximum(128);
 }
 
 Ipv6Widget::~Ipv6Widget() {
     inputFilter->deleteLater();
-
-    delete ui;
+    inputFilter = nullptr;
 }
 
 
-/* UI signal handlers slots */
-void Ipv6Widget::on_ipv6Address_textEdited(const QString&) {
-    update();
+QString Ipv6Widget::getIpv6RoutingPrefix(IPv6Network &net) {
+    if(net.CIDR() == 128)
+        return tr("N/A\n(Host Route)");
+    return QString::fromStdString(net.routingPrefix().toString());
 }
 
-void Ipv6Widget::on_subnetCount_currentIndexChanged(int) {
-    update();
-}
-
-void Ipv6Widget::on_cidr_valueChanged(int) {
-    update();
-}
-
-void Ipv6Widget::on_calculate_clicked() {
-    updateTableContent();
-    emit saveTableAvaliable(isSaveTableAvaliable);
+QString Ipv6Widget::getIpv6RangeString(IPv6Network &net) {
+    if(net.CIDR() >= 127)
+        return QString::fromStdString(net.host(0).toString());
+    return QString::fromStdString(net.host(0).toString()
+              + "\n-\n"
+              + net.host(net.hostCount() - 1).toString());
 }
 
 
-void Ipv6Widget::update() {
+void Ipv6Widget::update(bool updateTableContents) {
     updateSubnetCountRange();
-
-    isSaveTableAvaliable = false;
-    ui->subnetsTable->setColumnWidth(0, 0);
-    ui->subnetsTable->clear();
-    if(ui->subnetCount->currentIndex() > 8)
-        ui->calculate->show();
-    else {
-        ui->calculate->hide();
-        updateTableContent();
-    }
-
-    emit saveTableAvaliable(isSaveTableAvaliable);
-}
-
-void Ipv6Widget::updateSubnetCountRange() {
-    ui->subnetCount->blockSignals(true);
-
-    int currentSubnetCountIndex = ui->subnetCount->currentIndex();
-    ui->subnetCount->clear();
-
-    if(ui->ipv6Address->hasAcceptableInput()) {
-        uint_fast8_t cidr = ui->cidr->value();
-        uint128 ipCount = 1;
-        for(uint_fast8_t i = 0; i < 128 - cidr - 1; ++i, ipCount *= 2) {
-            ui->subnetCount->addItem(
-                QString::fromStdString(uint128toStdString(ipCount))
-                + " (2^" + QString::number(i) + ")"
-            );
-        }
-    }
-
-    if(ui->subnetCount->count() == 0)
-        ui->subnetCount->addItem("1 (2^0)");
-
-    ui->subnetCount->setCurrentIndex(
-        qMin(currentSubnetCountIndex, ui->subnetCount->count() - 1)
-    );
-
-    ui->subnetCount->blockSignals(false);
-}
-
-void Ipv6Widget::updateTableContent() {
-    auto getIpv6RoutingPrefix = [=](IPv6Network &net) {
-        if(net.CIDR() == 128)
-            return tr("N/A\n(Host Route)");
-        return QString::fromStdString(net.routingPrefix().toString());
-    };
-    auto getIpv6RangeString = [=](IPv6Network &net) {
-        if(net.CIDR() >= 127)
-            return QString::fromStdString(net.host(0).toString());
-        return QString::fromStdString(net.host(0).toString())
-             + "\n-\n"
-             + QString::fromStdString(net.host(net.hostCount() - 1).toString());
-    };
-
-
-    isSaveTableAvaliable = false;
-    ui->subnetsTable->clear();
+    if(!updateTableContents) return;
 
     uint64_t subnetCount = 1;
-    for(uint_fast8_t i = 0; i < ui->subnetCount->currentIndex(); ++i)
+    for(uint_fast8_t i = 0; i < ui->subnetCountInput->currentIndex(); ++i)
         subnetCount *= 2;
 
     try {
         net = IPv6Network(
-            IPv6Address(ui->ipv6Address->text().toStdString()),
-            ui->cidr->value()
+            IPv6Address(ui->addressInput->text().toStdString()),
+            ui->cidrInput->value()
         );
         subnets = net.getSubnets(subnetCount);
     }
@@ -197,135 +134,56 @@ void Ipv6Widget::updateTableContent() {
         return;
     }
 
-
-    isSaveTableAvaliable = true;
-
-    QTreeWidgetItem *rootItem = new QTreeWidgetItem(ui->subnetsTable);
+    QTreeWidgetItem *rootItem = new QTreeWidgetItem(*getItemTemplate());
+    ui->subnetsTable->addTopLevelItem(rootItem);
     rootItem->setText(1, getIpv6RoutingPrefix(net));
     rootItem->setText(2, getIpv6RangeString(net));
     rootItem->setText(3, "/" + QString::number(net.CIDR()));
     rootItem->setText(4, QString::fromStdString(
         uint128toStdString(net.hostCount())
     ));
-    for(int i = 0; i < 5; ++i)
-        rootItem->setTextAlignment(i, Qt::AlignCenter);
-    
+
     if(subnetCount > 1) {
-        rootItem->setExpanded(true);
-
-        QFontMetrics subnetIdFontMetrics = ui->subnetsTable->fontMetrics();
-        int subnetIdFontWidth = subnetIdFontMetrics.horizontalAdvance(
-            QString::number(subnetCount)
-        );
-        ui->subnetsTable->setColumnWidth(0, 60 + subnetIdFontWidth);
-
         for(int i = 0; i < subnets.size(); ++i) {
-            QTreeWidgetItem *item = new QTreeWidgetItem(rootItem);
+            QTreeWidgetItem *item = new QTreeWidgetItem(*getItemTemplate());
+            rootItem->addChild(item);
+
             item->setText(0, QString::number(i + 1));
-            item->setTextAlignment(0, Qt::AlignRight);
             item->setText(1, getIpv6RoutingPrefix(subnets[i]));
             item->setText(2, getIpv6RangeString(subnets[i]));
             item->setText(3, "/" + QString::number(subnets[i].CIDR()));
             item->setText(4, QString::fromStdString(
                 uint128toStdString(subnets.at(i).hostCount())
             ));
-
-            for(int j = 1; j < 6; ++j)
-                item->setTextAlignment(j, Qt::AlignCenter);
         }
     }
+    setSaveTableAvaliable(true);
 }
 
-bool Ipv6Widget::canSaveTable() {
-    return isSaveTableAvaliable;
-}
 
-void Ipv6Widget::saveTable() {
-    SaveAsDialog dialog(subnets.size() > 1, this);
-    dialog.exec();
-    if(!dialog.result().has_value())
-        return;
-        
-    auto opt = dialog.result().value();
+void Ipv6Widget::updateSubnetCountRange() {
+    ui->subnetCountInput->blockSignals(true);
 
-    QStringConverter::Encoding encoding;
+    int currentSubnetCountIndex = ui->subnetCountInput->currentIndex();
+    ui->subnetCountInput->clear();
 
-    switch (opt.encoding & ~CsvEncoding::BOM_FLAG) {
-    case CsvEncoding::UTF8:
-        encoding = QStringConverter::Encoding::Utf8;
-        break;
-    case CsvEncoding::UTF16BE:
-        encoding = QStringConverter::Encoding::Utf16BE;
-        break;
-    case CsvEncoding::UTF16LE:
-        encoding = QStringConverter::Encoding::Utf16LE;
-    case CsvEncoding::UTF32BE:
-        encoding = QStringConverter::Encoding::Utf32BE;
-        break;
-    case CsvEncoding::UTF32LE:
-        encoding = QStringConverter::Encoding::Utf32LE;
-        break;
-    default:
-        assert(0); // Unreachable
-        break;
+    if(ui->addressInput->hasAcceptableInput()) {
+        uint_fast8_t cidr = ui->cidrInput->value();
+        uint128 ipCount = 1;
+        for(uint_fast8_t i = 0; i < 128 - cidr - 1; ++i, ipCount *= 2) {
+            ui->subnetCountInput->addItem(
+                QString::fromStdString(uint128toStdString(ipCount))
+                + " (2^" + QString::number(i) + ")"
+            );
+        }
     }
 
-    QFileDialog fileDialog(this, tr("Save table"), QString(), tr("(*.csv)"));
-    fileDialog.setFileMode(QFileDialog::FileMode::AnyFile);
-    fileDialog.setAcceptMode(QFileDialog::AcceptMode::AcceptSave);
-    if(fileDialog.exec() == QDialog::Rejected)
-        return;
+    if(ui->subnetCountInput->count() == 0)
+        ui->subnetCountInput->addItem("1 (2^0)");
 
-    QString savePath = fileDialog.selectedFiles()[0];
-    QFile f(savePath);
-    f.open(QIODevice::WriteOnly);
-    
-    QTextStream stream(&f);
-    stream.setEncoding(encoding);
-    stream.setGenerateByteOrderMark(opt.encoding & CsvEncoding::BOM_FLAG);
+    ui->subnetCountInput->setCurrentIndex(
+        qMin(currentSubnetCountIndex, ui->subnetCountInput->count() - 1)
+    );
 
-    int columnCount = ui->subnetsTable->columnCount();
-    for(int i = 1; opt.saveHeaderNames && i < columnCount; ++i)
-        stream << opt.delimiter 
-               << ui->subnetsTable->headerItem()->text(i)
-               << opt.delimiter
-               << ((i == columnCount - 1) ? "\r\n" : opt.separator);
-    
-    for(int i = 1; opt.saveRootNet && i < columnCount; ++i)
-        stream << opt.delimiter
-               << ui->subnetsTable->itemAt(0, 0)->text(i)
-               << opt.delimiter
-               << ((i == columnCount - 1) ? "\r\n" : opt.separator);
-    
-    if(opt.saveSubnetsSeparator) {
-        stream << opt.delimiter
-               << tr("Subnets:")
-               << opt.delimiter
-               << opt.separator;
-
-        for(int i = 2; i < columnCount; ++i)
-            stream << opt.delimiter
-                   << opt.delimiter 
-                   << ((i == columnCount - 1) ? "\r\n" : opt.separator);
-    }
-
-    auto items = ui->subnetsTable->itemAt(0, 0);
-    for(unsigned i = 0; i < items->childCount(); ++i) {
-        auto item = items->child(i);
-        for(int i = 1; i < columnCount; ++i)
-            stream << opt.delimiter
-                   << item->text(i)
-                   << opt.delimiter
-                   << ((i == columnCount - 1) ? "\r\n" : opt.separator);
-    }
-    
-
-    stream.flush();
-    f.close();
-
-    if(f.error() != QFileDevice::NoError)
-        QMessageBox(QMessageBox::Critical,
-                    tr("IO error"),
-                    tr("Failed to save table. ") + f.errorString()
-        ).exec();
+    ui->subnetCountInput->blockSignals(false);
 }

@@ -24,13 +24,14 @@ set(SOURCES
     src/Ipv4Widget.cpp
     src/Ipv6Widget.hpp
     src/Ipv6Widget.cpp
+    src/AbstractIpWidget.hpp
+    src/AbstractIpWidget.cpp
     src/SaveAsDialog.hpp
     src/SaveAsDialog.cpp
 
 # Qt UI files:
     ui/MainWindow.ui
-    ui/Ipv4Widget.ui
-    ui/Ipv6Widget.ui
+    ui/AbstractIpWidget.ui
     ui/SaveAsDialog.ui
 
 # Qt QRC files:

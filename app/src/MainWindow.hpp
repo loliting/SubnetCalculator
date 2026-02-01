@@ -31,13 +31,15 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-
+public slots:
+    void cut();
+    void copy();
+    void paste();
 private slots:
     void updateActionSaveTableState();
 
     void on_tabWidget_currentChanged(int index);
-    void on_actionSave_Table_As_triggered();
-
+    void on_actionSaveTableAs_triggered();
 private:
     Ui::MainWindow *ui;
 };

@@ -1,5 +1,5 @@
 // This file is part of Subnet Calculator.
-// Copyright (C) 2024 Karol Maksymowicz
+// Copyright (C) 2026 Karol Maksymowicz
 //
 // Subnet Calculator is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,49 +18,36 @@
 #ifndef IPV4WIDGET_HPP
 #define IPV4WIDGET_HPP
 
-#include <QtCore/QObject>
 #include <QtWidgets/QWidget>
-#include <QtWidgets/QSpinBox>
-#include <QtWidgets/QLineEdit>
 
 #include <libSubnetCalculator.hpp>
 
-namespace Ui {
-class Ipv4Widget;
-}
+#include "AbstractIpWidget.hpp"
+
 class IpInputEventFilter;
 
-class Ipv4Widget : public QWidget
+class Ipv4Widget : public AbstractIpWidget
 {
     Q_OBJECT
 public:
     explicit Ipv4Widget(QWidget *parent = nullptr);
     ~Ipv4Widget();
-signals:
-    void saveTableAvaliable(bool);
 public slots:
-    void update();
-    bool canSaveTable();
-    void saveTable();
+    void update(bool updateTableContents) override;
 private slots:
     void updateSubnetCountRange();
-    void updateIpv4AddressClassTooltip();
-    void updateTableContent();
-
-    void on_ipv4Address_textEdited(const QString);
-    void on_cidr_valueChanged(int);
-    void on_calculate_clicked();
-    void on_subnetCount_currentIndexChanged(int index);
-
+    void updateIpv4AddressClassToolTip();
 private:
-    Ui::Ipv4Widget *ui;
-    IpInputEventFilter *inputFilter = nullptr;
+    QString getNetworkAddressString(libSubnetCalculator::IPv4Network&);
+    QString getIpv4RangeString(libSubnetCalculator::IPv4Network&);
+    QString getBroadcastAddressString(libSubnetCalculator::IPv4Network&);
+    QString getMaskString(libSubnetCalculator::IPv4Network&);
+private:
+    IpInputEventFilter *inputFilter;
 
     libSubnetCalculator::IPv4Address::Class lastIpv4Class;
     libSubnetCalculator::IPv4Network net;
     std::vector<libSubnetCalculator::IPv4Network> subnets;
-
-    bool isSaveTableAvaliable = false;
 };
 
 #endif // IPV4WIDGET_HPP
