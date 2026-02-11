@@ -34,12 +34,7 @@ jobs:
           submodules: 'recursive'
       - name: Install correct version of mingw
         run: |
-          choco uninstall mingw --force
           choco uninstall strawberryperl --force
-        if: ${{matrix.os == 'windows-latest'}}
-      - uses: numworks/setup-msys2@v1
-        with:
-          msystem: MINGW32
         if: ${{matrix.os == 'windows-latest'}}
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
